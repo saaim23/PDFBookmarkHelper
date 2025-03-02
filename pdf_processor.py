@@ -41,12 +41,12 @@ class PDFProcessor:
                 # Add page to writer
                 writer.add_page(page)
 
-                # Add bookmarks
-                bookmark_title = (
+                # Add outline (previously bookmark)
+                outline_title = (
                     f"{data['slip_name']} - "
                     f"{data['issuer_name'] or 'Unknown Issuer'}"
                 )
-                writer.add_bookmark(bookmark_title, page_num)
+                writer.add_outline_item(outline_title, page_num)
 
             # Create output PDF
             output_stream = io.BytesIO()
