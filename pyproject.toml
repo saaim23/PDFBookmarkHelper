@@ -7,4 +7,5 @@ dependencies = [
     "openai>=1.65.2",
     "pypdf2>=3.0.1",
     "streamlit>=1.42.2",
+    "twilio>=9.4.6",
 ]
