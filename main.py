@@ -26,12 +26,13 @@ def get_chat_response(prompt, context):
 
 def main():
     st.set_page_config(
-        page_title="Tax Slip PDF Processor",
+        page_title="Victoria PDF Helper",
         page_icon="📄",
         layout="wide"
     )
 
-    st.title("Canadian Tax Slip PDF Processor")
+    # Title and Description
+    st.title("Victoria PDF Helper")
     st.markdown("""
     Upload your tax slip PDFs to automatically:
     - Detect key information
@@ -156,6 +157,10 @@ def main():
         - Capital Gains/Realized Gain Summary
         - Tax Return Summary
         """)
+
+    # Add watermark at the bottom of the page
+    st.markdown("---")
+    st.markdown("<div style='text-align: center; color: #888;'>Made with pyaar by saaim ❤️</div>", unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
