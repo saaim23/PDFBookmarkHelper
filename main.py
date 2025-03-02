@@ -2,6 +2,8 @@ import streamlit as st
 import io
 from pdf_processor import PDFProcessor
 import openai
+import altair as alt
+import pandas as pd
 
 def initialize_chat_history():
     if "messages" not in st.session_state:
@@ -76,7 +78,8 @@ def main():
                 # Add search functionality
                 with st.sidebar:
                     st.header("Find in PDF")
-                    search_term = st.text_input("Enter text to find:")
+                    search_term = st.text_input("Tell me what to find in PDF:")
+                    search_context = st.slider("Context size (words)", 5, 30, 15)
                     if search_term:
                         st.subheader("Search Results")
                         found = False
@@ -86,12 +89,45 @@ def main():
                             for sentence in sentences:
                                 if search_term.lower() in sentence.lower():
                                     found = True
+                                    words = sentence.split()
+                                    search_index = -1
+                                    for i, word in enumerate(words):
+                                        if search_term.lower() in word.lower():
+                                            search_index = i
+                                            break
+
+                                    start_idx = max(0, search_index - search_context)
+                                    end_idx = min(len(words), search_index + search_context + 1)
+                                    context = ' '.join(words[start_idx:end_idx])
+
                                     st.write(f"**Page {page_data['page']}:**")
-                                    st.write(f"{sentence.strip()}.")
+                                    st.markdown(f"...{context}...")
                                     st.markdown("---")
 
                         if not found:
                             st.info(f"No matches found for '{search_term}'")
+
+                # Document Statistics
+                st.sidebar.header("Document Statistics")
+                total_pages = len(extracted_data) + len(unscanned_pages)
+                recognized_pages = len(extracted_data)
+
+                # Create a DataFrame for visualization
+                stats_data = pd.DataFrame({
+                    'Category': ['Recognized', 'Unrecognized'],
+                    'Pages': [recognized_pages, total_pages - recognized_pages]
+                })
+
+                # Create a donut chart
+                chart = alt.Chart(stats_data).mark_arc(innerRadius=50).encode(
+                    theta='Pages',
+                    color='Category',
+                    tooltip=['Category', 'Pages']
+                ).properties(width=200, height=200)
+
+                st.sidebar.altair_chart(chart)
+                st.sidebar.metric("Total Pages", total_pages)
+                st.sidebar.metric("Success Rate", f"{(recognized_pages/total_pages*100):.1f}%" if total_pages > 0 else "N/A")
 
                 # Create tabs for different sections
                 tabs = st.tabs(["Recognized Slips", "Unscanned Pages", "Chat with PDF"])
@@ -106,6 +142,7 @@ def main():
                             with col1:
                                 st.write("**Slip Type:**", page_data['slip_name'])
                                 st.write("**SIN:**", page_data['sin'] or "Not detected")
+                                st.write("**Tax Year:**", processor.extractor.extract_tax_year(page_data['text']) or "Not detected")
 
                             with col2:
                                 st.write("**Issuer Name:**", page_data['issuer_name'] or "Not detected")
@@ -175,6 +212,12 @@ def main():
         - T3 (Statement of Trust Income)
         - T5008 (Statement of Securities Transactions)
         - T1135 (Foreign Income Verification)
+        - T2200 (Declaration of Employment Conditions)
+        - T2202 (Tuition Certificate)
+        - T5013 (Partnership Income)
+        - T777 (Employment Expenses)
+        - T2125 (Business Activities)
+        - RRSP Contribution Receipts
         - Capital Gains/Realized Gain Summary
         - Tax Return Summary
         """)
