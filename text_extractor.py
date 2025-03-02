@@ -1,6 +1,10 @@
 import re
+from custom_patterns import CustomPatternManager
 
 class TextExtractor:
+    def __init__(self):
+        self.pattern_manager = CustomPatternManager()
+
     @staticmethod
     def extract_sin(text):
         # Look for 9-digit number pattern (Canadian SIN)
@@ -62,3 +66,42 @@ class TextExtractor:
         # Clean and format text for chat context
         cleaned_text = re.sub(r'\s+', ' ', text).strip()
         return cleaned_text
+
+    def extract_custom_fields(self, text):
+        """Extract all custom fields from text."""
+        return self.pattern_manager.extract_all_fields(text)
+
+    def add_custom_pattern(self, name: str, pattern: str) -> bool:
+        """Add a new custom pattern."""
+        return self.pattern_manager.add_pattern(name, pattern)
+
+    def remove_custom_pattern(self, name: str) -> bool:
+        """Remove a custom pattern."""
+        return self.pattern_manager.remove_pattern(name)
+
+#Dummy custom_patterns.py file content. Replace with your actual implementation
+#This is a placeholder and needs to be created separately for runnable code.
+#In a real-world scenario, this would contain the CustomPatternManager class
+#with appropriate pattern handling logic.
+
+class CustomPatternManager:
+    def __init__(self):
+        self.patterns = {}
+
+    def extract_all_fields(self, text):
+        results = {}
+        for name, pattern in self.patterns.items():
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                results[name] = match.group(1).strip() if match.groups() else match.group(0)
+        return results
+
+    def add_pattern(self, name, pattern):
+        self.patterns[name] = pattern
+        return True
+
+    def remove_pattern(self, name):
+        if name in self.patterns:
+            del self.patterns[name]
+            return True
+        return False

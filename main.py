@@ -7,6 +7,10 @@ def initialize_chat_history():
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+def initialize_custom_patterns():
+    if "custom_patterns" not in st.session_state:
+        st.session_state.custom_patterns = {}
+
 def get_chat_response(prompt, context):
     messages = [
         {"role": "system", "content": f"You are a helpful assistant analyzing tax documents. Here's the context from the PDF: {context}"},
@@ -41,8 +45,9 @@ def main():
     - Chat with your documents
     """)
 
-    # Initialize chat history
+    # Initialize states
     initialize_chat_history()
+    initialize_custom_patterns()
 
     # Initialize PDF processor
     processor = PDFProcessor()
@@ -55,6 +60,33 @@ def main():
             if api_key:
                 openai.api_key = api_key
                 st.success("API key configured!")
+
+    # Custom Pattern Management
+    with st.sidebar:
+        st.header("Custom Field Detection")
+        with st.expander("Add Custom Pattern"):
+            pattern_name = st.text_input("Pattern Name", key="pattern_name")
+            pattern_regex = st.text_input("Regular Expression", key="pattern_regex")
+            if st.button("Add Pattern"):
+                if pattern_name and pattern_regex:
+                    if processor.extractor.add_custom_pattern(pattern_name, pattern_regex):
+                        st.session_state.custom_patterns[pattern_name] = pattern_regex
+                        st.success(f"Added pattern: {pattern_name}")
+                    else:
+                        st.error("Invalid regular expression")
+
+        # Display existing patterns
+        if st.session_state.custom_patterns:
+            st.subheader("Existing Patterns")
+            for name, pattern in st.session_state.custom_patterns.items():
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.code(f"{name}: {pattern}")
+                with col2:
+                    if st.button("Remove", key=f"remove_{name}"):
+                        processor.extractor.remove_custom_pattern(name)
+                        del st.session_state.custom_patterns[name]
+                        st.experimental_rerun()
 
     # File upload
     uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
@@ -74,7 +106,7 @@ def main():
                 processed_pdf, extracted_data, unscanned_pages, full_text = processor.process_pdf(pdf_bytes)
 
                 # Create tabs for different sections
-                tabs = st.tabs(["Recognized Slips", "Unscanned Pages", "Chat with PDF"])
+                tabs = st.tabs(["Recognized Slips", "Custom Fields", "Unscanned Pages", "Chat with PDF"])
 
                 # Tab 1: Recognized Slips
                 with tabs[0]:
@@ -91,8 +123,23 @@ def main():
                                 st.write("**Issuer Name:**", page_data['issuer_name'] or "Not detected")
                                 st.write("**Taxpayer Name:**", page_data['taxpayer_name'] or "Not detected")
 
-                # Tab 2: Unscanned Pages
+                # Tab 2: Custom Fields
                 with tabs[1]:
+                    st.subheader("Custom Field Detection")
+                    if st.session_state.custom_patterns:
+                        for page_num, page_data in enumerate(extracted_data):
+                            with st.expander(f"Page {page_num + 1}"):
+                                custom_fields = processor.extractor.extract_custom_fields(page_data.get('text', ''))
+                                if custom_fields:
+                                    for field_name, value in custom_fields.items():
+                                        st.write(f"**{field_name}:** {value}")
+                                else:
+                                    st.info("No custom fields detected on this page")
+                    else:
+                        st.info("Add custom patterns in the sidebar to detect specific fields")
+
+                # Tab 3: Unscanned Pages
+                with tabs[2]:
                     st.subheader("Unscanned Pages")
                     if unscanned_pages:
                         for page_data in unscanned_pages:
@@ -108,8 +155,8 @@ def main():
                     else:
                         st.info("All pages were successfully categorized!")
 
-                # Tab 3: Chat with PDF
-                with tabs[2]:
+                # Tab 4: Chat with PDF
+                with tabs[3]:
                     st.subheader("Chat with your PDF")
                     if 'OPENAI_API_KEY' in st.secrets or openai.api_key:
                         user_question = st.text_input("Ask a question about your tax documents:")

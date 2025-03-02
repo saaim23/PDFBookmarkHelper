@@ -30,7 +30,8 @@ class PDFProcessor:
                     'sin': self.extractor.extract_sin(text),
                     'slip_name': slip_name,
                     'issuer_name': self.extractor.extract_issuer_name(text),
-                    'taxpayer_name': self.extractor.extract_taxpayer_name(text)
+                    'taxpayer_name': self.extractor.extract_taxpayer_name(text),
+                    'text': text  # Include the raw text for custom field detection
                 }
 
                 if slip_name == 'Unrecognized':
